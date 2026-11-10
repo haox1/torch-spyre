@@ -186,7 +186,8 @@ void JobPlanStepHostCompute::construct(LaunchContext& ctx,
   }
 
   auto* params = flex::createHostComputeParams(handle_.get(), correction_size_,
-                                               input_buffer_, std::move(args));
+                                               input_buffer_, std::move(args),
+                                               symbols_dump_dir_);
 
   struct Guard {
     flex::HostComputeParams* p;
@@ -244,6 +245,9 @@ void JobPlanStepHostCompute::write(std::ostream& os) const {
   os << "  Host Compute\n";
   os << "    Correction size: " << correction_size_ << " bytes\n";
   os << "    Device address: " << device_address_ << "\n";
+  if (!symbols_dump_dir_.empty()) {
+    os << "    Symbols dump dir: " << symbols_dump_dir_ << "\n";
+  }
   os << "    Pipeline barrier: " << (pipeline_barrier_ ? "enabled" : "disabled")
      << "\n";
 }

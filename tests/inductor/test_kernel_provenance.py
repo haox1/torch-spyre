@@ -736,6 +736,27 @@ class TestKernelProvenancePropagation:
         )
         register_kernel_provenance.assert_not_called()
 
+    def test_runner_passes_symbols_dump_dir_only_when_enabled(self):
+        with (
+            patch("torch_spyre.execution.kernel_runner.register_kernel_provenance"),
+            patch(
+                "torch_spyre.execution.kernel_runner.prepare_kernel",
+                return_value="jobplan",
+            ) as prepare_kernel,
+            patch("torch_spyre.execution.kernel_runner.torch.spyre._impl._lazy_init"),
+            patch(
+                "torch_spyre.execution.kernel_runner._spyre_config.dump_symbols",
+                True,
+            ),
+        ):
+            runner = SpyreSDSCKernelRunner("sdsc_fused_mm_0", "/tmp/kernel")
+            assert runner.jobplan == "jobplan"
+        prepare_kernel.assert_called_once_with(
+            "/tmp/kernel/spyreCodeDir",
+            sdsc_bundle_dir_prefix="",
+            symbols_dump_dir="/tmp/kernel/spyreCodeDir",
+        )
+
 
 class TestSpyreSDSCKernelRunnerSymbolicArgs:
     """Unit tests for the _symbolic_args payload built at construction time.

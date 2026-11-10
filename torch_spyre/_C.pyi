@@ -564,6 +564,7 @@ def prepare_kernel(
     stream: _SpyreStreamBase | None = None,
     profiler_event_name: str | None = None,
     sdsc_bundle_dir_prefix: str | None = "",
+    symbols_dump_dir: str = "",
 ) -> JobPlan:
     """
     Prepare a kernel from a SpyreCode directory and return a JobPlan.
@@ -579,6 +580,9 @@ def prepare_kernel(
             SHA-256 cache key), 8 hex characters on the no-cache/KTIR path
             (first 8 of the UUID). Emitted as ``args.sdsc_bundle_dir_prefix`` in
             profiler traces. Empty string disables registration. Defaults to "".
+        symbols_dump_dir: Directory under which host compute writes the symbol
+            value table (``symbols.txt``) next to each ``host.so``. Empty string
+            disables the dump. Defaults to "".
 
     Returns:
         Prepared JobPlan ready for execution

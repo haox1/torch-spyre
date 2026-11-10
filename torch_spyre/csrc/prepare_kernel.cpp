@@ -209,11 +209,13 @@ static int64_t safe_stoll(const std::string& str,
 JobPlanBuilder::JobPlanBuilder(const std::string& spyrecode_dir,
                                const SpyreStream* stream,
                                std::optional<std::string> profiler_event_name,
-                               std::string sdsc_bundle_dir_prefix)
+                               std::string sdsc_bundle_dir_prefix,
+                               std::string symbols_dump_dir)
     : spyrecode_dir_(spyrecode_dir),
       stream_(stream ? *stream : getCurrentStream()),
       profiler_event_name_(std::move(profiler_event_name)),
-      sdsc_bundle_dir_prefix_(std::move(sdsc_bundle_dir_prefix)) {
+      sdsc_bundle_dir_prefix_(std::move(sdsc_bundle_dir_prefix)),
+      symbols_dump_dir_(std::move(symbols_dump_dir)) {
   // Validate directory exists
   TORCH_CHECK(std::filesystem::exists(spyrecode_dir_),
               "SpyreCode directory does not exist: ", spyrecode_dir_.string());
@@ -515,7 +517,7 @@ std::unique_ptr<JobPlanStep> JobPlanBuilder::translateComputeOnHostWithH2D(
 
   return std::make_unique<JobPlanStepHostCompute>(
       std::move(hcm_data), correction_size, std::move(device_address), inp_ptr,
-      std::move(ishape));
+      std::move(ishape), symbols_dump_dir_);
 }
 
 std::unique_ptr<JobPlanStep> JobPlanBuilder::translateDataTransfer(
@@ -816,9 +818,10 @@ std::unique_ptr<JobPlan> JobPlanBuilder::build() {
 std::unique_ptr<JobPlan> prepareKernel(
     const std::string& spyrecode_dir, const SpyreStream* stream,
     std::optional<std::string> profiler_event_name,
-    std::string sdsc_bundle_dir_prefix) {
+    std::string sdsc_bundle_dir_prefix, std::string symbols_dump_dir) {
   JobPlanBuilder builder(spyrecode_dir, stream, std::move(profiler_event_name),
-                         std::move(sdsc_bundle_dir_prefix));
+                         std::move(sdsc_bundle_dir_prefix),
+                         std::move(symbols_dump_dir));
   auto jobplan = builder.build();
 
   // Dump JobPlan if debug logging is enabled

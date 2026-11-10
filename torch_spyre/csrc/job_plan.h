@@ -540,14 +540,18 @@ class JobPlanStepHostCompute final : public JobPlanStep {
    * @param input_buffer Pinned host buffer used as input (Case 1); nullptr for
    *            Cases 2 and 3.
    * @param ishape used to discriminate case 2 (fake symbols)
+   * @param symbols_dump_dir Directory under which flex writes the symbol value
+   *            table (symbols.txt) next to each host.so; empty disables it.
    */
   JobPlanStepHostCompute(std::unique_ptr<Hcm> hcm, size_t correction_size,
                          flex::CompositeAddress device_address,
-                         const void* input_buffer, std::vector<int64_t> ishape)
+                         const void* input_buffer, std::vector<int64_t> ishape,
+                         std::string symbols_dump_dir = {})
       : correction_size_(correction_size),
         device_address_(std::move(device_address)),
         input_buffer_(input_buffer),
-        ishape_(std::move(ishape)) {
+        ishape_(std::move(ishape)),
+        symbols_dump_dir_(std::move(symbols_dump_dir)) {
     // Inherits pipeline_barrier_ = true from the base. HostCompute keeps strict
     // per-stream FIFO like every other op; overlap with device compute comes
     // from placing HostCompute on the prep stream (S_prep), NOT from relaxing
@@ -577,6 +581,7 @@ class JobPlanStepHostCompute final : public JobPlanStep {
   flex::CompositeAddress device_address_;  ///< device destination for H2D
   const void* input_buffer_;  // Non-owning pointer (JobPlan owns the buffer)
   std::vector<int64_t> ishape_;
+  std::string symbols_dump_dir_;  ///< empty: no symbol table dump
   std::unique_ptr<flex::HostComputeHandle>
       handle_;  ///< handle to the host compute operation
 };

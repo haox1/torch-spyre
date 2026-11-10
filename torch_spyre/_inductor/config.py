@@ -303,6 +303,16 @@ frontend_only: bool = os.getenv("TORCH_SPYRE_FRONTEND_ONLY", "0").lower() in (
     "yes",
 )
 
+# Debugging aid: when a kernel's host compute runs at launch time, write the
+# value of every symbol (``ID=VALUE`` lines) as ``symbols.txt`` next to each
+# ``host.so`` under the kernel's spyreCodeDir, so the kernel can be replayed
+# on hostsen/senulator with the real addresses.  Off by default.
+dump_symbols: bool = os.getenv("TORCH_SPYRE_DUMP_SYMBOLS", "0").lower() in (
+    "1",
+    "true",
+    "yes",
+)
+
 # Predicted-runtime reporting from the analytical cost model (cost_model.py,
 # cost_model_pass.py).  NOT related to work_division.cost_model_matmul_division,
 # which is a separate model used to choose a matmul work division.

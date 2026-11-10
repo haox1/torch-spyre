@@ -59,10 +59,14 @@ class JobPlanBuilder {
    * cache key), 8 hex characters on the no-cache/KTIR path (first 8 of the UUID
    * prefix). Emitted as args.sdsc_bundle_dir_prefix in profiler traces. Empty
    * string disables registration.
+   * @param symbols_dump_dir Directory under which host compute writes the
+   * symbol value table (symbols.txt) next to each host.so. Empty string
+   * disables the dump.
    */
   JobPlanBuilder(const std::string& spyrecode_dir, const SpyreStream* stream,
                  std::optional<std::string> profiler_event_name = std::nullopt,
-                 std::string sdsc_bundle_dir_prefix = {});
+                 std::string sdsc_bundle_dir_prefix = {},
+                 std::string symbols_dump_dir = {});
 
   /**
    * @brief Build the JobPlan
@@ -159,6 +163,8 @@ class JobPlanBuilder {
   /// the no-cache/KTIR path (first 8 of the UUID). Emitted in trace args
   /// as sdsc_bundle_dir_prefix regardless of whether provenance is set.
   const std::string sdsc_bundle_dir_prefix_;
+  /// Directory for the symbol value table dump; empty disables it.
+  const std::string symbols_dump_dir_;
   /// Device memory allocation for the job (set during preparation and moved to
   /// JobPlan in translation)
   std::vector<flex::CompositeAddress> job_allocation_;
@@ -221,11 +227,14 @@ class JobPlanBuilder {
  * cache key), 8 hex characters on the no-cache/KTIR path (first 8 of the UUID
  * prefix). Emitted as args.sdsc_bundle_dir_prefix in profiler traces. Empty
  * string disables registration.
+ * @param symbols_dump_dir Directory under which host compute writes the symbol
+ * value table (symbols.txt) next to each host.so. Empty string disables the
+ * dump.
  * @return Prepared JobPlan
  */
 std::unique_ptr<JobPlan> prepareKernel(
     const std::string& spyrecode_dir, const SpyreStream* stream = nullptr,
     std::optional<std::string> profiler_event_name = std::nullopt,
-    std::string sdsc_bundle_dir_prefix = {});
+    std::string sdsc_bundle_dir_prefix = {}, std::string symbols_dump_dir = {});
 
 }  // namespace spyre

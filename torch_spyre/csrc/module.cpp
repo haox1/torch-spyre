@@ -969,6 +969,7 @@ PYBIND11_MODULE(_C, m) {
         py::arg("stream") = nullptr,
         py::arg("profiler_event_name") = std::nullopt,
         py::arg("sdsc_bundle_dir_prefix") = std::string{},
+        py::arg("symbols_dump_dir") = std::string{},
         "Prepare a kernel from a SpyreCode directory and return a JobPlan.\n\n"
         "Args:\n"
         "    spyrecode_dir (str): Path to the SpyreCode directory\n"
@@ -983,7 +984,10 @@ PYBIND11_MODULE(_C, m) {
         "lowercase base32 cache key, a SHA-256 digest) on the cached path, or "
         "8 hex characters (the first 8 hex characters of a UUID) on the "
         "no-cache/KTIR path. "
-        "Empty string disables registration.\n\n"
+        "Empty string disables registration.\n"
+        "    symbols_dump_dir (str, optional): Directory under which host "
+        "compute writes the symbol value table (symbols.txt) next to each "
+        "host.so. Empty string disables the dump.\n\n"
         "Returns:\n"
         "    Prepared JobPlan ready for execution");
   // Bind the current-stream overload (resolves the current stream internally).

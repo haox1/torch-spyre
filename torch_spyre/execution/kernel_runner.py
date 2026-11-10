@@ -20,6 +20,7 @@ from torch_spyre._C import (
     prepare_kernel,
     register_kernel_provenance,
 )
+from torch_spyre._inductor import config as _spyre_config
 from torch_spyre._inductor.codegen.compute_ops import SymbolKind
 from torch_spyre._inductor.logging_utils import get_inductor_logger
 from torch_spyre._inductor.kernel_provenance import KernelProvenanceDescriptor
@@ -160,17 +161,23 @@ class SpyreSDSCKernelRunner:
             # prepare_kernel(), which calls into JobPlanBuilder/getDefaultStream().
             torch.spyre._impl._lazy_init()
             spyrecode_dir = self.code_dir + "/spyreCodeDir"
+            # Only passed when enabled, so the default call is unchanged.
+            extra = {}
+            if _spyre_config.dump_symbols:
+                extra["symbols_dump_dir"] = spyrecode_dir
             with torch.profiler.record_function(f"prepare_kernel:{self.kernel_name}"):
                 if self.profiler_event_name is None:
                     self._jobplan = prepare_kernel(
                         spyrecode_dir,
                         sdsc_bundle_dir_prefix=self.sdsc_bundle_dir_prefix,
+                        **extra,
                     )
                 else:
                     self._jobplan = prepare_kernel(
                         spyrecode_dir,
                         profiler_event_name=self.profiler_event_name,
                         sdsc_bundle_dir_prefix=self.sdsc_bundle_dir_prefix,
+                        **extra,
                     )
         return self._jobplan
 
