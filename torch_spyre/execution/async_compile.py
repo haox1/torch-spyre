@@ -249,6 +249,7 @@ def _run_backend_compiler(
     backend_loop_unroll: bool,
     ktir_device_mlir: str,
     timeout: float | None,
+    emit_hostsen_lib: bool = False,
 ) -> str:
     """Compile one materialized bundle with dbo-opt and return its directory.
 
@@ -264,6 +265,9 @@ def _run_backend_compiler(
     ``ktir_device_mlir`` is the same parent-side device override used for the key.
     ``timeout`` is likewise resolved in the parent (``_backend_compile_timeout``)
     so a runtime config change reaches pool workers too.
+    ``emit_hostsen_lib`` is likewise the parent's resolved ``dump_symbols``: it
+    adds ``--kEmitHostsenLib`` so dbo-opt also writes ``spyreCodeDir/host.so``,
+    the library the symbol dump is written next to.
     """
     _check_backend_compiler_on_path()
 
@@ -277,6 +281,10 @@ def _run_backend_compiler(
     # Always pass the resolved value, including the default, so compilation
     # matches the cache key instead of depending on dbo-opt's own default.
     cmd.append(f"--enable-loop-unroll={int(backend_loop_unroll)}")
+    # Only on request: it needs a dbo-opt that has the option, and it makes the
+    # compile also run HCC for every program.
+    if emit_hostsen_lib:
+        cmd.append("--kEmitHostsenLib")
     cmd += [
         f"--export-dir={compile_dir}",
         "-kEmitSpyreCode",
@@ -470,6 +478,7 @@ class SpyreAsyncCompile(AsyncCompile):
         backend_loop_unroll: bool,
         ktir_device_mlir: str,
         timeout: float | None,
+        emit_hostsen_lib: bool = False,
     ) -> Future[str] | None:
         """Submit the backend compile to Inductor's pool, or compile inline."""
         # Everything before this call is frontend work and _run_backend_compiler
@@ -493,6 +502,7 @@ class SpyreAsyncCompile(AsyncCompile):
                     backend_loop_unroll,
                     ktir_device_mlir,
                     timeout,
+                    emit_hostsen_lib,
                 )
 
         with timing_recorder.stage(_BACKEND_STAGE, kernel=kernel_name, tool="dbo-opt"):
@@ -503,6 +513,7 @@ class SpyreAsyncCompile(AsyncCompile):
                 backend_loop_unroll,
                 ktir_device_mlir,
                 timeout,
+                emit_hostsen_lib,
             )
         return None
 
@@ -572,6 +583,10 @@ class SpyreAsyncCompile(AsyncCompile):
         # config snapshot, including overrides made with config.patch.
         backend_loop_unroll = _spyre_config.backend_loop_unroll
         ktir_device_mlir = _spyre_config.ktir_device_mlir
+        # Asking for the symbol dump also needs host.so, which dbo-opt writes
+        # only with --kEmitHostsenLib.  Part of the cache key below, so an entry
+        # compiled without host.so is not served to a run that wants one.
+        emit_hostsen_lib = _spyre_config.dump_symbols
         timeout = _backend_compile_timeout()
         use_cache = (
             _spyre_config.spyre_kernel_cache
@@ -595,6 +610,7 @@ class SpyreAsyncCompile(AsyncCompile):
                     pool_size=pool_size,
                     backend_loop_unroll=backend_loop_unroll,
                     ktir_device_mlir=ktir_device_mlir,
+                    emit_hostsen_lib=emit_hostsen_lib,
                 )
             except RuntimeError as e:
                 logger.warning(
@@ -638,6 +654,7 @@ class SpyreAsyncCompile(AsyncCompile):
                         backend_loop_unroll=backend_loop_unroll,
                         ktir_device_mlir=ktir_device_mlir,
                         timeout=timeout,
+                        emit_hostsen_lib=emit_hostsen_lib,
                     )
                     if task is not None:
                         return self._compile_future(
@@ -677,6 +694,7 @@ class SpyreAsyncCompile(AsyncCompile):
             backend_loop_unroll=backend_loop_unroll,
             ktir_device_mlir=ktir_device_mlir,
             timeout=timeout,
+            emit_hostsen_lib=emit_hostsen_lib,
         )
         if task is not None:
             return self._compile_future(
@@ -791,6 +809,10 @@ class SpyreAsyncCompile(AsyncCompile):
         cmd = ["dbo-opt", "--from-ktir"]
         if _spyre_config.ktir_device_mlir:
             cmd.append(f"--device={_spyre_config.ktir_device_mlir}")
+        # host.so is what the symbol dump is written next to; see
+        # _run_backend_compiler.
+        if _spyre_config.dump_symbols:
+            cmd.append("--kEmitHostsenLib")
         cmd += [
             f"--export-dir={output_dir}",
             "--kEmitSpyreCode",

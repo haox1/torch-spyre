@@ -149,6 +149,42 @@ def test_bundle_cache_key_includes_resolved_device_mlir():
     assert default != custom
 
 
+def test_bundle_cache_key_includes_emit_hostsen_lib():
+    """A kernel compiled without host.so is not reused by a run that needs it."""
+    with (
+        patch.object(
+            kernel_cache, "_get_backend_compiler_version", return_value="test"
+        ),
+        patch.object(kernel_cache, "_get_torch_spyre_version", return_value="test"),
+    ):
+        off = kernel_cache.compute_specs_hash([], emit_hostsen_lib=False)
+        on = kernel_cache.compute_specs_hash([], emit_hostsen_lib=True)
+        # Off is the default, so keys of runs that never ask for it are unchanged.
+        assert off == kernel_cache.compute_specs_hash([])
+        assert off != on
+        with spyre_config.patch(dump_symbols=True):
+            assert kernel_cache.compute_specs_hash([]) == on
+
+
+@pytest.mark.parametrize("emit", [False, True])
+def test_backend_compiler_passes_emit_hostsen_lib_only_when_asked(tmp_path, emit):
+    code_dir = tmp_path / "spyreCodeDir"
+    code_dir.mkdir()
+    (code_dir / "spyrecode.json").write_text("{}")
+    with (
+        patch.object(async_compile_mod, "_check_backend_compiler_on_path"),
+        patch.object(async_compile_mod.subprocess, "run") as run,
+    ):
+        async_compile_mod._run_backend_compiler(
+            "kernel", str(tmp_path), {}, True, "", 60.0, emit
+        )
+    args = run.call_args.args[0]
+    assert ("--kEmitHostsenLib" in args) is emit
+    if emit:
+        # An option of dbo-opt, so before the pipeline and the input file.
+        assert args.index("--kEmitHostsenLib") < args.index("-kEmitSpyreCode")
+
+
 @pytest.mark.parametrize("unroll", [False, True])
 @pytest.mark.parametrize("timeout", [60.0, None])
 def test_backend_compiler_forwards_loop_unroll_control(tmp_path, unroll, timeout):
@@ -208,6 +244,7 @@ def test_single_worker_compiles_inline_without_starting_pool(unroll):
         unroll,
         "/parent/device.mlir",
         123.0,
+        False,
     )
 
 

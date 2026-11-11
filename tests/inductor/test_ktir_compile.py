@@ -213,6 +213,26 @@ class TestKtirDboSuccess(_PrereqCase):
         self.assertIn("--kEmitSpyreCode", cmd)
         self.assertEqual(cmd[-1], self.ktir_path)
 
+    def test_kemithostsenlib_only_with_dump_symbols(self):
+        """host.so (what the symbol dump goes next to) is asked for only on request."""
+        for dump, expected in ((False, False), (True, True)):
+            with (
+                mock.patch(f"{_CONFIG}.dump_symbols", dump),
+                mock.patch(f"{_MODULE}.SpyreSDSCKernelRunner"),
+                mock.patch(
+                    f"{_MODULE}.subprocess.run",
+                    side_effect=lambda *a, **k: self._run_ok(),
+                ) as run,
+            ):
+                self.compile()
+            cmd = run.call_args[0][0]
+            self.assertEqual("--kEmitHostsenLib" in cmd, expected)
+            if expected:
+                # An option of dbo-opt, so before the pipeline and the input.
+                self.assertLess(
+                    cmd.index("--kEmitHostsenLib"), cmd.index("--kEmitSpyreCode")
+                )
+
     def test_set_device_mlir_is_passed_through(self):
         """The override still reaches dbo-opt when config names a path."""
         with (
